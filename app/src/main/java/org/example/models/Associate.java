@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "associados")
+@Table(name = "associates")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,29 +31,29 @@ public class Associate {
     @Column(nullable = false, length = 20)
     private String phone;
 
-    @Column(name = "relato_caso", columnDefinition = "TEXT")
+    @Column(name = "case_report", columnDefinition = "TEXT")
     private String caseReport;
 
-    @Column(name = "orientacao_juridica", columnDefinition = "TEXT")
+    @Column(name = "legal_guidance", columnDefinition = "TEXT")
     private String legalGuidance;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "estagiario_id", nullable = false)
+    @JoinColumn(name = "intern_id", nullable = false)
     private User intern;
 
-    @OneToMany(mappedBy = "associado", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Service> service;
+    @OneToMany(mappedBy = "associate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Consultation> consultation;
 
-    @OneToMany(mappedBy = "associado", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "associate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Process> processes;
 
-    @OneToMany(mappedBy = "associado", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "associate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Conciliation> conciliations;
 
-    @Column(name = "criado_em")
+    @Column(name = "created_At")
     private LocalDateTime createdAt;
 
-    @Column(name = "atualizado_em")
+    @Column(name = "updated_At")
     private LocalDateTime updatedAt;
 
     @PrePersist

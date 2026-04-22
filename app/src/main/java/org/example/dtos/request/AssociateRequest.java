@@ -6,7 +6,7 @@ import org.hibernate.validator.constraints.br.CPF;
 
 public record AssociateRequest(
         @NotBlank(message = "Nome é obrigatório")
-        String nome,
+        String name,
 
         @NotBlank(message = "CPF é obrigatório")
         @CPF(message = "CPF inválido")

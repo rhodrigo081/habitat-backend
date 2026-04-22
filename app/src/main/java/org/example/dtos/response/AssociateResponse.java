@@ -3,14 +3,14 @@ package org.example.dtos.response;
 import java.time.LocalDateTime;
 
 public record AssociateResponse(Long id,
-                                String nome,
+                                String name,
                                 String cpf,
                                 String address,
                                 String phone,
                                 String caseReport,
                                 String legalGuidance,
                                 Long internId,
-                                String internNome,
+                                String internName,
                                 LocalDateTime createdAt,
                                 LocalDateTime updatedAt) {
 }

@@ -7,13 +7,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "atendimentos")
+@Table(name = "TB_Consultations")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Service {
+public class Consultation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,17 +26,17 @@ public class Service {
     private LocalDate date;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "estagiario_id", nullable = false)
+    @JoinColumn(name = "intern_id", nullable = false)
     private User intern;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "associado_id", nullable = false)
+    @JoinColumn(name = "associate_id", nullable = false)
     private Associate associate;
 
-    @Column(name = "criado_em")
+    @Column(name = "create_At")
     private LocalDateTime createAt;
 
-    @Column(name = "atualizado_em")
+    @Column(name = "updated_At")
     private LocalDateTime updatedAt;
 
     @PrePersist

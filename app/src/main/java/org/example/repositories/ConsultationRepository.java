@@ -1,6 +1,6 @@
 package org.example.repositories;
 
-import org.example.models.Service;
+import org.example.models.Consultation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,36 +12,36 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface ServiceRepository extends JpaRepository<Service, Long> {
+public interface ConsultationRepository extends JpaRepository<Consultation, Long> {
 
-    List<Service> findByAssociateId(Long associateId);
+    List<Consultation> findByAssociateId(Long associateId);
 
-    Page<Service> findByAssociateId(Long associateId, Pageable pageable);
+    Page<Consultation> findByAssociateId(Long associateId, Pageable pageable);
 
-    List<Service> findByInternId(Long internId);
+    List<Consultation> findByInternId(Long internId);
 
-    Page<Service> findByInternId(Long internId, Pageable pageable);
+    Page<Consultation> findByInternId(Long internId, Pageable pageable);
 
     @Query("""
-        SELECT at FROM Service at
+        SELECT at FROM Consultation at
         WHERE at.intern.coordinator.id = :coordinatorId
         ORDER BY at.date DESC
         """)
-    Page<Service> findByCoordenadorId(@Param("coordinatorId") Long coordinatorId, Pageable pageable);
+    Page<Consultation> findByCoordinatorId(@Param("coordinatorId") Long coordinatorId, Pageable pageable);
 
     @Query("""
-        SELECT at FROM Service at
+        SELECT at FROM Consultation at
         WHERE at.intern.coordinator.id = :coordinatorId
         AND at.date BETWEEN :dateStart AND :dateEnd
         ORDER BY at.date DESC
         """)
-    List<Service> findByCoordenadorIdEPeriodo(
+    List<Consultation> findByCoordinatorIdEPeriodo(
             @Param("coordinatorId") Long coordinatorId,
             @Param("dateStart") LocalDate dateStart,
             @Param("dateEnd") LocalDate dateEnd);
 
     long countByInternId(Long internId);
 
-    @Query("SELECT COUNT(at) FROM Service at WHERE at.intern.coordinator.id = :coordinatorId")
+    @Query("SELECT COUNT(at) FROM Consultation at WHERE at.intern.coordinator.id = :coordinatorId")
     long countByCoordinatorId(@Param("coordinatorId") Long coordinatorId);
 }

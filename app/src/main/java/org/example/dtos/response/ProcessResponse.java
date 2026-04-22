@@ -11,9 +11,9 @@ public record ProcessResponse(Long id,
                               String description,
                               ProcessStatus currentStatus,
                               Long associateId,
-                              String associateNome,
+                              String associateName,
                               Long internId,
-                              String internNome,
+                              String internName,
                               LocalDateTime createdAt,
                               LocalDateTime updatedAt) {
 }

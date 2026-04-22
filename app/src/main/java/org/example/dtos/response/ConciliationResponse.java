@@ -5,14 +5,14 @@ import org.example.enums.CitationStatus;
 import java.time.LocalDateTime;
 
 public record ConciliationResponse (Long id,
-                                    String paroppositePartyNameteContariaNome,
+                                    String oppositePartyName,
                                     String oppositePartyContact,
                                     LocalDateTime audienceDateTime,
                                     String summary,
                                     CitationStatus citationStatus,
                                     Long associateId,
-                                    String associateNome,
+                                    String associateName,
                                     Long internId,
-                                    String internNome,
+                                    String internName,
                                     LocalDateTime createdAt){
 }

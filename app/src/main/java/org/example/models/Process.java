@@ -7,7 +7,7 @@ import org.example.enums.ProcessStatus;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "processos")
+@Table(name = "TB_Processos")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,7 +19,7 @@ public class Process {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "numero_processo", nullable = false, unique = true)
+    @Column(name = "process_number", nullable = false, unique = true)
     private String processNumber;
 
     @Column(nullable = false)
@@ -32,21 +32,21 @@ public class Process {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "fase_atual", nullable = false)
+    @Column(name = "current_status", nullable = false)
     private ProcessStatus currentStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "associado_id", nullable = false)
+    @JoinColumn(name = "associate_id", nullable = false)
     private Associate associate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "estagiario_id", nullable = false)
+    @JoinColumn(name = "intern_id", nullable = false)
     private User intern;
 
-    @Column(name = "criado_em")
+    @Column(name = "created_At")
     private LocalDateTime createdAt;
 
-    @Column(name = "atualizado_em")
+    @Column(name = "updated_At")
     private LocalDateTime updatedAt;
 
     @PrePersist
