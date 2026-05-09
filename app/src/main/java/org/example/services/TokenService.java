@@ -25,7 +25,7 @@ public class TokenService {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
 
-            return com.auth0.jwt.JWT.create().withIssuer("SuanyCakes-API").withSubject(user.getEmail()).withExpiresAt(getExpirationDate()).sign(algorithm);
+            return com.auth0.jwt.JWT.create().withIssuer("Habitat-API").withSubject(user.getEmail()).withExpiresAt(getExpirationDate()).sign(algorithm);
         } catch (JWTCreationException e) {
             throw new RuntimeException("Erro ao gerar token.", e);
         }
@@ -34,7 +34,7 @@ public class TokenService {
     public String validateToken(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.require(algorithm).withIssuer("SuanyCakes-API").build().verify(token).getSubject();
+            return JWT.require(algorithm).withIssuer("Habitat-API").build().verify(token).getSubject();
         } catch (TokenExpiredException e) {
             throw new UnauthorizedAccessException("Token expirado.");
         } catch (SignatureVerificationException e) {

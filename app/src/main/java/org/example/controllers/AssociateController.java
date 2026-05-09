@@ -5,6 +5,7 @@ import org.example.dtos.request.AssociateRequest;
 import org.example.dtos.response.AssociateResponse;
 import org.example.models.User;
 import org.example.services.AssociateService;
+import org.example.repositories.CaseHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,9 @@ public class AssociateController {
 
     @Autowired
     private AssociateService associateService;
+    
+    @Autowired
+    private CaseHistoryRepository caseHistoryRepository;
 
     @PostMapping
     public ResponseEntity<AssociateResponse> register(
@@ -59,5 +63,25 @@ public class AssociateController {
             @Valid @RequestBody AssociateRequest request,
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(associateService.update(id, request, user));
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getHistory(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        // Verifica permissão (vai jogar exception se não puder ver)
+        associateService.findById(id, user);
+
+        var history = caseHistoryRepository.findByAssociateIdOrderByCreatedAtDesc(id);
+        var response = history.stream().map(h -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", h.getId());
+            map.put("action", h.getAction());
+            map.put("userName", h.getUser().getName());
+            map.put("createdAt", h.getCreatedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 }

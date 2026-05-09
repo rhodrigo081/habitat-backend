@@ -9,7 +9,10 @@ import org.example.exceptions.UnauthorizedAccessException;
 import org.example.mapper.AssociateMapper;
 import org.example.models.Associate;
 import org.example.models.User;
+import org.example.models.CaseHistory;
 import org.example.repositories.AssociateRepository;
+import org.example.repositories.CaseHistoryRepository;
+import org.example.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,11 +28,22 @@ public class AssociateService {
     private AssociateRepository associateRepository;
     @Autowired
     private AssociateMapper associateMapper;
+    @Autowired
+    private CaseHistoryRepository caseHistoryRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @Transactional
     public AssociateResponse register(AssociateRequest associateRequest, User intern) {
         if (associateRepository.existsByCpf(associateRequest.cpf())) {
             throw new InvalidCredentialsExceptions("CPF já cadastrado: " + associateRequest.cpf());
+        }
+
+        // Se um internId foi fornecido (admin criando por outro estagiário), usa esse intern
+        User actualIntern = intern;
+        if (associateRequest.internId() != null) {
+            actualIntern = userRepository.findById(associateRequest.internId())
+                .orElseThrow(() -> new NotFoundException("Estagiário" + associateRequest.internId()));
         }
 
         Associate associate = Associate.builder()
@@ -39,10 +53,22 @@ public class AssociateService {
                 .phone(associateRequest.phone())
                 .caseReport(associateRequest.caseReport())
                 .legalGuidance(associateRequest.legalGuidance())
-                .intern(intern)
+                .attendanceStatus(associateRequest.attendanceStatus() != null ? associateRequest.attendanceStatus() : "triagem")
+                .attendanceType(associateRequest.attendanceType() != null ? associateRequest.attendanceType() : "judicial")
+                .coordinatorId(associateRequest.coordinatorId())
+                .intern(actualIntern)
                 .build();
 
-        return associateMapper.toResponse(associateRepository.save(associate));
+        associate = associateRepository.save(associate);
+
+        CaseHistory history = CaseHistory.builder()
+                .associate(associate)
+                .user(actualIntern)
+                .action("Caso criado")
+                .build();
+        caseHistoryRepository.save(history);
+
+        return associateMapper.toResponse(associate);
     }
 
     @Transactional
@@ -55,6 +81,11 @@ public class AssociateService {
         associate.setCaseReport(associateRequest.caseReport());
         associate.setLegalGuidance(associateRequest.legalGuidance());
 
+        String oldStatus = associate.getAttendanceStatus();
+        if (associateRequest.attendanceStatus() != null) associate.setAttendanceStatus(associateRequest.attendanceStatus());
+        if (associateRequest.attendanceType() != null) associate.setAttendanceType(associateRequest.attendanceType());
+        if (associateRequest.coordinatorId() != null) associate.setCoordinatorId(associateRequest.coordinatorId());
+
         if (!associate.getCpf().equals(associateRequest.cpf())) {
             if (associateRepository.existsByCpf(associateRequest.cpf())) {
                 throw new InvalidCredentialsExceptions("CPF já cadastrado: " + associateRequest.cpf());
@@ -62,7 +93,18 @@ public class AssociateService {
             associate.setCpf(associateRequest.cpf());
         }
 
-        return associateMapper.toResponse(associateRepository.save(associate));
+        associate = associateRepository.save(associate);
+
+        if (associateRequest.attendanceStatus() != null && !oldStatus.equals(associateRequest.attendanceStatus())) {
+            CaseHistory history = CaseHistory.builder()
+                    .associate(associate)
+                    .user(requester)
+                    .action("Status alterado para: " + associateRequest.attendanceStatus())
+                    .build();
+            caseHistoryRepository.save(history);
+        }
+
+        return associateMapper.toResponse(associate);
     }
 
     @Transactional(readOnly = true)

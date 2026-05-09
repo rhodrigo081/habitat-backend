@@ -21,5 +21,13 @@ public record AssociateRequest(
 
         String caseReport,
 
-        String legalGuidance
+        String legalGuidance,
+
+        String attendanceStatus,
+
+        String attendanceType,
+
+        Long coordinatorId,
+
+        Long internId
 ) {}

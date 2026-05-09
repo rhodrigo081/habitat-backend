@@ -37,6 +37,15 @@ public class Associate {
     @Column(name = "legal_guidance", columnDefinition = "TEXT")
     private String legalGuidance;
 
+    @Column(name = "attendance_status")
+    private String attendanceStatus = "triagem"; // triagem, documentacao, processo, finalizado
+
+    @Column(name = "attendance_type")
+    private String attendanceType = "judicial"; // judicial, conciliacao
+
+    @Column(name = "coordinator_id")
+    private Long coordinatorId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "intern_id", nullable = false)
     private User intern;
