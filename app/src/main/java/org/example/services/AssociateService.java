@@ -8,8 +8,8 @@ import org.example.exceptions.NotFoundException;
 import org.example.exceptions.UnauthorizedAccessException;
 import org.example.mapper.AssociateMapper;
 import org.example.models.Associate;
-import org.example.models.User;
 import org.example.models.CaseHistory;
+import org.example.models.User;
 import org.example.repositories.AssociateRepository;
 import org.example.repositories.CaseHistoryRepository;
 import org.example.repositories.UserRepository;
@@ -19,7 +19,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AssociateService {
@@ -39,11 +42,10 @@ public class AssociateService {
             throw new InvalidCredentialsExceptions("CPF já cadastrado: " + associateRequest.cpf());
         }
 
-        // Se um internId foi fornecido (admin criando por outro estagiário), usa esse intern
         User actualIntern = intern;
         if (associateRequest.internId() != null) {
             actualIntern = userRepository.findById(associateRequest.internId())
-                .orElseThrow(() -> new NotFoundException("Estagiário" + associateRequest.internId()));
+                    .orElseThrow(() -> new NotFoundException("Estagiário" + associateRequest.internId()));
         }
 
         Associate associate = Associate.builder()
@@ -107,6 +109,12 @@ public class AssociateService {
         return associateMapper.toResponse(associate);
     }
 
+    @Transactional
+    public void delete(Long id, User requester) {
+        Associate associate = findWithPermission(id, requester);
+        associateRepository.delete(associate);
+    }
+
     @Transactional(readOnly = true)
     public AssociateResponse findById(Long id, User requester) {
         return associateMapper.toResponse(findWithPermission(id, requester));
@@ -142,6 +150,27 @@ public class AssociateService {
                 associateRepository.findByInternId(internId));
     }
 
+    /**
+     * Retorna o histórico de um associate — lógica movida do controller para cá.
+     * O controller não deve depender de repositórios diretamente.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getHistory(Long id, User requester) {
+        // Verifica permissão
+        findWithPermission(id, requester);
+
+        return caseHistoryRepository.findByAssociateIdOrderByCreatedAtDesc(id)
+                .stream()
+                .map(h -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", h.getId());
+                    map.put("action", h.getAction());
+                    map.put("userName", h.getUser().getName());
+                    map.put("createdAt", h.getCreatedAt());
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
 
     public Associate findAssociateById(Long id) {
         return associateRepository.findById(id)
@@ -174,7 +203,6 @@ public class AssociateService {
     }
 
     private Long resolveCoordinatorId(User requester) {
-
         if (requester.getRole() == UserRole.ADMINISTRATOR || requester.getRole() == UserRole.COORDINATOR) {
             return null;
         }

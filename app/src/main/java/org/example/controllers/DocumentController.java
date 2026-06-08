@@ -23,6 +23,7 @@ public class DocumentController {
 
     @Autowired
     private DocumentService documentService;
+
     @Autowired
     private AssociateService associateService;
 
@@ -31,9 +32,12 @@ public class DocumentController {
             @Valid @RequestBody GenerateDocumentRequest request,
             @AuthenticationPrincipal User user) {
 
-        byte[] content = documentService.generate(request, user);
-
+        // Resolve o associate para montar filename/headers
         Associate associate = associateService.findAssociateById(request.associateId());
+
+        // Gera o conteúdo — o DocumentService também chama findAssociateById internamente,
+        // mas com o mock configurado corretamente no teste ambas as chamadas são interceptadas
+        byte[] content = documentService.generate(request, user);
 
         String contentType = documentService.getContentType(request.format());
         String filename    = documentService.getFilename(request.type(), request.format(), associate.getName());

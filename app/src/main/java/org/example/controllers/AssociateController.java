@@ -5,7 +5,6 @@ import org.example.dtos.request.AssociateRequest;
 import org.example.dtos.response.AssociateResponse;
 import org.example.models.User;
 import org.example.services.AssociateService;
-import org.example.repositories.CaseHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/associates")
@@ -23,9 +23,6 @@ public class AssociateController {
 
     @Autowired
     private AssociateService associateService;
-    
-    @Autowired
-    private CaseHistoryRepository caseHistoryRepository;
 
     @PostMapping
     public ResponseEntity<AssociateResponse> register(
@@ -36,11 +33,12 @@ public class AssociateController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<AssociateResponse>> listALl(
+    public ResponseEntity<Page<AssociateResponse>> listAll(
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false) String term,
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        return ResponseEntity.ok(associateService.findAll(user, term, pageable));
+        // repassa "search" como "term" para o service — nome interno do service não muda
+        return ResponseEntity.ok(associateService.findAll(user, search, pageable));
     }
 
     @GetMapping("/{id}")
@@ -65,23 +63,18 @@ public class AssociateController {
         return ResponseEntity.ok(associateService.update(id, request, user));
     }
 
-    @GetMapping("/{id}/history")
-    public ResponseEntity<List<java.util.Map<String, Object>>> getHistory(
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-        // Verifica permissão (vai jogar exception se não puder ver)
-        associateService.findById(id, user);
+        associateService.delete(id, user);
+        return ResponseEntity.noContent().build();
+    }
 
-        var history = caseHistoryRepository.findByAssociateIdOrderByCreatedAtDesc(id);
-        var response = history.stream().map(h -> {
-            java.util.Map<String, Object> map = new java.util.HashMap<>();
-            map.put("id", h.getId());
-            map.put("action", h.getAction());
-            map.put("userName", h.getUser().getName());
-            map.put("createdAt", h.getCreatedAt());
-            return map;
-        }).collect(java.util.stream.Collectors.toList());
-
-        return ResponseEntity.ok(response);
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<Map<String, Object>>> getHistory(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(associateService.getHistory(id, user));
     }
 }
