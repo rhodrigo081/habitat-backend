@@ -24,7 +24,6 @@ public class FileAttachment {
     @Column(nullable = false)
     private String contentType;
 
-    // We store the reference to the frontend "Caso" id (e.g. "c12345")
     @Column(nullable = false)
     private String referenceId;
 
