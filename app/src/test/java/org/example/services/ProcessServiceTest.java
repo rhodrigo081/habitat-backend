@@ -1,20 +1,29 @@
 package org.example.services;
 
-import org.example.models.FileAttachment;
-import org.example.repositories.FileAttachmentRepository;
+import org.example.dtos.request.ProcessRequest;
+import org.example.dtos.response.ProcessResponse;
+import org.example.enums.ProcessStatus;
+import org.example.enums.UserRole;
+import org.example.exceptions.InvalidCredentialsExceptions;
+import org.example.exceptions.UnauthorizedAccessException;
+import org.example.mapper.ProcessMapper;
+import org.example.models.Associate;
+import org.example.models.Process;
+import org.example.models.User;
+import org.example.repositories.ProcessRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.nio.file.Path;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,90 +32,175 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class FileAttachmentServiceTest {
+class ProcessServiceTest {
 
     @Mock
-    private FileAttachmentRepository repository;
+    private ProcessRepository processRepository;
+
+    @Mock
+    private AssociateService associateService;
+
+    @Mock
+    private ProcessMapper processMapper;
 
     @InjectMocks
-    private FileAttachmentService fileAttachmentService;
+    private ProcessService processService;
 
-    @TempDir
-    Path tempDir;
-
-    private FileAttachment attachment;
-    private MultipartFile multipartFile;
+    private User admin;
+    private User coordinator;
+    private User intern;
+    private User unauthorizedIntern;
+    private Associate associate;
+    private Process process;
+    private ProcessRequest processRequest;
+    private ProcessResponse processResponse;
 
     @BeforeEach
     void setUp() {
+        admin = User.builder().id(1L).role(UserRole.ADMINISTRATOR).build();
+        coordinator = User.builder().id(2L).role(UserRole.COORDINATOR).build();
+        
+        intern = User.builder().id(3L).role(UserRole.INTERN).coordinator(coordinator).build();
+        unauthorizedIntern = User.builder().id(4L).role(UserRole.INTERN).build(); // Estagiário de outro processo
 
-        ReflectionTestUtils.setField(fileAttachmentService, "uploadDir", tempDir.toAbsolutePath().toString() + "/");
+        associate = Associate.builder().id(10L).name("João Silva").build();
 
-        attachment = FileAttachment.builder()
-                .id(1L)
-                .fileName("documento.pdf")
-                .contentType("application/pdf")
-                .referenceId("REF-123")
-                .filePath(tempDir.toAbsolutePath().toString() + "/mock_documento.pdf")
+        processRequest = new ProcessRequest(
+                "0001234-56.2023.8.26.0000",
+                "São Paulo",
+                "1ª Vara Cível",
+                "Ação de Indenização",
+                ProcessStatus.INITIAL,
+                associate.getId()
+        );
+
+        process = Process.builder()
+                .id(100L)
+                .processNumber(processRequest.processNumber())
+                .city(processRequest.city())
+                .court(processRequest.court())
+                .description(processRequest.description())
+                .currentStatus(processRequest.status())
+                .associate(associate)
+                .intern(intern)
                 .build();
 
-        multipartFile = new MockMultipartFile(
-                "file",
-                "documento.pdf",
-                "application/pdf",
-                "Conteúdo simulado do arquivo".getBytes()
+        processResponse = new ProcessResponse(
+                process.getId(),
+                process.getProcessNumber(),
+                process.getCity(),
+                process.getCourt(),
+                process.getDescription(),
+                process.getCurrentStatus(),
+                associate.getId(),
+                associate.getName(),
+                intern.getId(),
+                "Nome Estagiário",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
     }
 
     @Test
-    @DisplayName("Deve salvar o ficheiro fisicamente e registar na base de dados")
-    void storeFileShouldSaveToDiskAndDatabase() throws IOException {
-        when(repository.save(any(FileAttachment.class))).thenReturn(attachment);
+    @DisplayName("Deve registar um processo com sucesso")
+    void registerShouldSaveProcessSuccessfully() {
+        when(processRepository.existsByProcessNumber(processRequest.processNumber())).thenReturn(false);
+        when(associateService.findAssociateById(processRequest.associateId())).thenReturn(associate);
+        when(processRepository.save(any(Process.class))).thenReturn(process);
+        when(processMapper.toResponse(any(Process.class))).thenReturn(processResponse);
 
-        FileAttachment result = fileAttachmentService.storeFile(multipartFile, "REF-123");
+        ProcessResponse result = processService.register(processRequest, intern);
 
         assertNotNull(result);
-        assertEquals("documento.pdf", result.getFileName());
-        assertEquals("REF-123", result.getReferenceId());
-        
-        verify(repository, times(1)).save(any(FileAttachment.class));
-
-        assertTrue(tempDir.toFile().list().length > 0);
+        assertEquals(processRequest.processNumber(), result.processNumber());
+        verify(processRepository, times(1)).save(any(Process.class));
     }
 
     @Test
-    @DisplayName("Deve retornar o ficheiro quando o ID existir")
-    void getFileShouldReturnFileWhenIdExists() {
-        when(repository.findById(1L)).thenReturn(Optional.of(attachment));
+    @DisplayName("Deve lançar exceção ao registar processo com número já existente")
+    void registerShouldThrowWhenProcessNumberExists() {
+        when(processRepository.existsByProcessNumber(processRequest.processNumber())).thenReturn(true);
 
-        FileAttachment result = fileAttachmentService.getFile(1L);
-
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("documento.pdf", result.getFileName());
-    }
-
-    @Test
-    @DisplayName("Deve lançar RuntimeException quando o ID não existir")
-    void getFileShouldThrowExceptionWhenIdDoesNotExist() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            fileAttachmentService.getFile(99L);
+        InvalidCredentialsExceptions exception = assertThrows(InvalidCredentialsExceptions.class, () -> {
+            processService.register(processRequest, intern);
         });
 
-        assertEquals("Arquivo não encontrado com o id: 99", exception.getMessage());
+        assertTrue(exception.getMessage().contains("já cadastrado"));
+        verify(processRepository, never()).save(any(Process.class));
     }
 
     @Test
-    @DisplayName("Deve retornar lista de ficheiros pelo referenceId")
-    void getFilesByReferenceIdShouldReturnList() {
-        when(repository.findByReferenceId("REF-123")).thenReturn(List.of(attachment));
+    @DisplayName("Deve atualizar um processo com sucesso")
+    void updateShouldUpdateProcessSuccessfully() {
+        when(processRepository.findById(process.getId())).thenReturn(Optional.of(process));
+        when(associateService.findAssociateById(processRequest.associateId())).thenReturn(associate);
+        when(processRepository.save(any(Process.class))).thenReturn(process);
+        when(processMapper.toResponse(any(Process.class))).thenReturn(processResponse);
 
-        List<FileAttachment> result = fileAttachmentService.getFilesByReferenceId("REF-123");
+        ProcessResponse result = processService.update(process.getId(), processRequest, intern);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("REF-123", result.get(0).getReferenceId());
+        verify(processRepository, times(1)).save(any(Process.class));
+    }
+
+    @Test
+    @DisplayName("Deve lançar UnauthorizedAccessException se estagiário tentar acessar processo de outro")
+    void findByIdShouldThrowForUnauthorizedIntern() {
+        when(processRepository.findById(process.getId())).thenReturn(Optional.of(process));
+
+        assertThrows(UnauthorizedAccessException.class, () -> {
+            processService.findById(process.getId(), unauthorizedIntern);
+        });
+    }
+
+    @Test
+    @DisplayName("Deve permitir Administrador acessar qualquer processo")
+    void findByIdShouldReturnProcessForAdministrator() {
+        when(processRepository.findById(process.getId())).thenReturn(Optional.of(process));
+        when(processMapper.toResponse(process)).thenReturn(processResponse);
+
+        ProcessResponse result = processService.findById(process.getId(), admin);
+
+        assertNotNull(result);
+        assertEquals(process.getId(), result.id());
+    }
+
+    @Test
+    @DisplayName("Deve atualizar o status do processo com sucesso")
+    void updateStatusShouldUpdateSuccessfully() {
+        when(processRepository.findById(process.getId())).thenReturn(Optional.of(process));
+        when(processRepository.save(any(Process.class))).thenReturn(process);
+        when(processMapper.toResponse(any(Process.class))).thenReturn(processResponse);
+
+        ProcessResponse result = processService.updateStatus(process.getId(), ProcessStatus.JUDGMENT, intern);
+
+        assertNotNull(result);
+        verify(processRepository, times(1)).save(any(Process.class));
+    }
+
+    @Test
+    @DisplayName("Deve listar todos os processos para Administrador")
+    void findAllShouldReturnAllForAdministrator() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Process> page = new PageImpl<>(List.of(process));
+        
+        when(processRepository.findAll(pageable)).thenReturn(page);
+        when(processMapper.toResponse(any(Process.class))).thenReturn(processResponse);
+
+        Page<ProcessResponse> result = processService.findAll(admin, pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        verify(processRepository, times(1)).findAll(pageable);
+    }
+
+    @Test
+    @DisplayName("Deve deletar processo com sucesso")
+    void deleteShouldRemoveProcess() {
+        when(processRepository.findById(process.getId())).thenReturn(Optional.of(process));
+
+        processService.delete(process.getId(), admin);
+
+        verify(processRepository, times(1)).delete(process);
     }
 }

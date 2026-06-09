@@ -5,15 +5,15 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class InvalidArgumentExceptionTest {
+class InvalidCredentialsExceptionsTest {
 
     @Test
     @DisplayName("Deve inicializar a exceção com a mensagem correta")
     void shouldInitializeWithMessage() {
+        
+        String errorMessage = "Credenciais inválidas fornecidas";
 
-        String errorMessage = "O argumento fornecido é inválido";
-
-        InvalidArgumentException exception = new InvalidArgumentException(errorMessage);
+        InvalidCredentialsExceptions exception = new InvalidCredentialsExceptions(errorMessage);
 
         assertNotNull(exception);
         assertEquals(errorMessage, exception.getMessage());
