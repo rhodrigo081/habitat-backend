@@ -1,20 +1,4 @@
 services:
-  database:
-    image: postgres:latest
-    container_name: habitat-database
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: habitat
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${DB_USER}", "-d", "habitat"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   backend:
     build: ./app
     container_name: habitat-api
@@ -25,9 +9,10 @@ services:
     working_dir: /app
     command: sh -c "chmod +x mvnw && ./mvnw spring-boot:run"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://habitat-database:5432/habitat
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       API_SECRET_TOKEN: ${API_SECRET_TOKEN}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
@@ -41,6 +26,3 @@ services:
             - target/
         - action: rebuild
           path: ./app/pom.xml
-    depends_on:
-      database:
-        condition: service_healthy
